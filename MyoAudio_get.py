@@ -9,7 +9,7 @@ from time import time
 
 #test
 RECORD_SECONDS = 1 #rec time
-bpm = 150 #beat per minuit
+bpm = 150 #beat per minute
 beeptime = 100 #click time
 
 bpm_time = 1000.0/(bpm / 60) #time/1click msec
