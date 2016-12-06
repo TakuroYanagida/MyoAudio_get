@@ -81,7 +81,7 @@ if __name__ == "__main__":
         click_count += 1
     """
     th_click.start()
-    #raw_imput("press enter key for rec end") #
+    raw_imput("press enter key for rec end") #rec end by press enter
     print ("finished recording")
     print ("wait...")
     #bottom margin
