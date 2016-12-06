@@ -80,12 +80,14 @@ if __name__ == "__main__":
         sleep(minus_beeptime)
         click_count += 1
     """
+    th_click.start()
     #raw_imput("press enter key for rec end") #
     print ("finished recording")
     print ("wait...")
     #bottom margin
     for count in [4,3,2,1]:
         sleep(minus_beeptime)
+    th_click._Thread__stop()
 
     #---output part---
     stream.stop_stream()
