@@ -21,6 +21,8 @@ import wave
 from time import sleep
 from winsound import Beep
 
+print "I'm yanacchi!!!!!!!!!!!"
+
 input_num = 1 #マイク入力のデバイス番号
 
 FORMAT = pyaudio.paInt16
