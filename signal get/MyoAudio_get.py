@@ -71,7 +71,7 @@ def Audio_Callback(in_data, frame_count, time_info, status):
     return(None, pyaudio.paContinue)
 
 #myoelectronical(arduino) setup
-ser = serial.Serial("COM3",115200) #デバイス名とボーレートを設定しポートをオープン
+ser = serial.Serial("COM3",115200) #デバイス名とボーレート（arduino側も同じ数値に要設定）を設定しポート
 
 if __name__ == "__main__":
     audio = pyaudio.PyAudio()
