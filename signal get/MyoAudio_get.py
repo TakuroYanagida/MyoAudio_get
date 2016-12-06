@@ -142,6 +142,7 @@ if __name__ == "__main__":
     for row in Myo_Frames:
         #write_data = row
         f.write("\n")
+        #f.write(row)
         f.write(row.translate(None, "・")) #外れ値削除しファイルに書き込み
 
         #print row
