@@ -6,6 +6,7 @@ from winsound import Beep
 import serial
 import threading
 from time import time
+import pygame.midi
 
 #---settings---
 #RECORD_SECONDS = 1 #rec time[sec]
@@ -16,10 +17,15 @@ bpm_time = 1000.0/(bpm / 60) #time/1click[msec]
 minus_beeptime = (bpm_time - beeptime)/1000.0 #wait time between clicks[sec]
 
 WAVE_OUTPUT_FILENAME = "../Audio_file.wav" #wav file name
+MIDI_OUTPUT_FILENAME = "../Midi_file.txt" #midi file name
 MYO_OUTPUT_FILENAME = "../Myo_file.txt" #myo file name
 
 Myo_Frames = [] #Myoelectronical signal colums
 Audio_Frames = [] #Audio signal colums
+Midi_Frames = [] #Midi's time & velocity colums
+
+#myoelectronical(arduino) setup
+ser = serial.Serial("COM3",115200) #デバイス名とボーレート（arduino側も同じ数値に要設定）
 
 #define thread class
 class control_th():
@@ -29,8 +35,10 @@ class control_th():
 
         #スレッドの作成と開始
         self.thread_Myo = threading.Thread(target = self.Myo_get)
-        self.thread_click = threading.Thread(target = self.click_output)
+        self.thread_click = threading.Thread(target = self.Click_output)
+        self.thread_Midi = threading.Thread(target = self.Midi_get)
         self.thread_Myo.start()
+        self.thread_Midi.start()
 
         #head margin countdown to rec start
         for count in [4,3,2,1]:
@@ -41,24 +49,35 @@ class control_th():
         self.thread_click.start()
 
     def Myo_get(self):
-        count = 1
-        step = 1
         while not self.stop_event.is_set():
             data = ser.read()
             Myo_Frames.append(data)
 
-    def click_output(self):
+    def Click_output(self):
         while not self.stop_event.is_set():
             Beep(700,beeptime)
             sleep(minus_beeptime)
 
-    def stop(self):
-        """スレッドを停止させる"""
-        self.stop_event.set()
-        self.thread_Myo.join()    #スレッドが停止するのを待つ
-        self.thread_click.join()    #スレッドが停止するのを待つ
+    def Midi_get(self):
+        pygame.midi.init()
+        input_id = pygame.midi.get_default_input_id()
+        #print("input MIDI:%d" % input_id)
+        i = pygame.midi.Input(input_id)
+        while not self.stop_event.is_set():
+            if i.poll():
+                Midi_Frames.append(i.read(10)) #一度に取得したい個数を指定，多すぎるとエラー
+        i.close()
+        pygame.midi.quit()
+        pygame.quit()
 
-#---audio setup---
+    def stop(self):
+        #スレッドを停止させる
+        self.stop_event.set()
+        self.thread_Myo.join() #スレッドが停止するのを待つ
+        self.thread_Midi.join() #スレッドが停止するのを待つ
+        self.thread_click.join() #スレッドが停止するのを待つ
+
+#audio setup
 input_num = 1 #マイク入力のデバイス番号
 
 FORMAT = pyaudio.paInt16
@@ -70,9 +89,7 @@ def Audio_Callback(in_data, frame_count, time_info, status):
     Audio_Frames.append(in_data) #この中で別スレッドの処理
     return(None, pyaudio.paContinue)
 
-#myoelectronical(arduino) setup
-ser = serial.Serial("COM3",115200) #デバイス名とボーレート（arduino側も同じ数値に要設定）を設定しポート
-
+#---main program---
 if __name__ == "__main__":
     audio = pyaudio.PyAudio()
 
@@ -90,9 +107,7 @@ if __name__ == "__main__":
     #thread start
     thread_do = control_th()
 
-    #th_Myo.start()
     print ("recording...")
-    #stream.start_stream()
     """
     #指定秒数で録音終了
     click_count = 0
@@ -120,8 +135,6 @@ if __name__ == "__main__":
     stream.close()
     audio.terminate()
 
-    ser.close() #ポートのクローズ
-
     #Audio output
     waveFile = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
     waveFile.setnchannels(CHANNELS)
@@ -130,19 +143,25 @@ if __name__ == "__main__":
     waveFile.writeframes(b''.join(Audio_Frames))
     waveFile.close()
 
+    #midi output
+    fm = open(MIDI_OUTPUT_FILENAME, "w")
+    for colum1 in Midi_Frames:
+        for colum2 in colum1:
+            if colum2[0][2] > 0:
+                fm.write(str(colum2[1]))
+                fm.write(",")
+                fm.write(str(colum2[0][2])) #ファイルに書き込み
+                fm.write("\n")
+
     #Myoelectronical output
     f = open(MYO_OUTPUT_FILENAME, "w")
 
-    outliers = "・" #外れ値群　""の中にどんどん追加していく書式
-
-    #f.write(Myo_Frames[0].translate(None, outliers))
     Myo_SR = len(Myo_Frames)//(th_end_time - th_start_time) #Myoelectronical sampling rate
 
+    outliers = "・" #外れ値群　""の中にどんどん追加していく書式
     f.write(str(Myo_SR)) #write sampling rate
     for row in Myo_Frames:
-        #write_data = row
         f.write("\n")
-        #f.write(row)
         f.write(row.translate(None, "・")) #外れ値削除しファイルに書き込み
 
         #print row
