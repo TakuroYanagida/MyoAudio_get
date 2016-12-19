@@ -10,19 +10,19 @@ import pygame.midi
 
 #---settings---
 #RECORD_SECONDS = 1 #rec time[sec]
-bpm = 150 #beat per minute
+bpm = 160 #beat per minute
 beeptime = 100 #click time[msec]
 
 bpm_time = 1000.0/(bpm / 60) #time/1click[msec]
 minus_beeptime = (bpm_time - beeptime)/1000.0 #wait time between clicks[sec]
 
-WAVE_OUTPUT_FILENAME = "../Audio_file.wav" #wav file name
-MIDI_OUTPUT_FILENAME = "../Midi_file.txt" #midi file name
-MYO_OUTPUT_FILENAME = "../Myo_file.txt" #myo file name
+WAVE_OUTPUT_FILENAME = "../data/20161219/5/audio/audio_file1.wav" #wav file name
+#MIDI_OUTPUT_FILENAME = "../Midi_file15.txt" #midi file name
+MYO_OUTPUT_FILENAME = "../data/20161219/5/myo/myo_file1.txt" #myo file name
 
 Myo_Frames = [] #Myoelectronical signal colums
 Audio_Frames = [] #Audio signal colums
-Midi_Frames = [] #Midi's time & velocity colums
+#Midi_Frames = [] #Midi's time & velocity colums
 
 #myoelectronical(arduino) setup
 ser = serial.Serial("COM3",115200) #デバイス名とボーレート（arduino側も同じ数値に要設定）
@@ -36,9 +36,9 @@ class control_th():
         #スレッドの作成と開始
         self.thread_Myo = threading.Thread(target = self.Myo_get)
         self.thread_click = threading.Thread(target = self.Click_output)
-        self.thread_Midi = threading.Thread(target = self.Midi_get)
+        #self.thread_Midi = threading.Thread(target = self.Midi_get)
         self.thread_Myo.start()
-        self.thread_Midi.start()
+        #self.thread_Midi.start()
 
         #head margin countdown to rec start
         for count in [4,3,2,1]:
@@ -57,7 +57,7 @@ class control_th():
         while not self.stop_event.is_set():
             Beep(700,beeptime)
             sleep(minus_beeptime)
-
+    """
     def Midi_get(self):
         pygame.midi.init()
         input_id = pygame.midi.get_default_input_id()
@@ -69,12 +69,13 @@ class control_th():
         i.close()
         pygame.midi.quit()
         pygame.quit()
+    """
 
     def stop(self):
         #スレッドを停止させる
         self.stop_event.set()
         self.thread_Myo.join() #スレッドが停止するのを待つ
-        self.thread_Midi.join() #スレッドが停止するのを待つ
+        #self.thread_Midi.join() #スレッドが停止するのを待つ
         self.thread_click.join() #スレッドが停止するのを待つ
 
 #audio setup
@@ -134,6 +135,7 @@ if __name__ == "__main__":
     stream.stop_stream()
     stream.close()
     audio.terminate()
+    ser.close() #シリアルポートのクローズ
 
     #Audio output
     waveFile = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
@@ -143,6 +145,7 @@ if __name__ == "__main__":
     waveFile.writeframes(b''.join(Audio_Frames))
     waveFile.close()
 
+    """
     #midi output
     fm = open(MIDI_OUTPUT_FILENAME, "w")
     for colum1 in Midi_Frames:
@@ -152,17 +155,21 @@ if __name__ == "__main__":
                 fm.write(",")
                 fm.write(str(colum2[0][2])) #ファイルに書き込み
                 fm.write("\n")
+    """
 
     #Myoelectronical output
     f = open(MYO_OUTPUT_FILENAME, "w")
 
-    Myo_SR = len(Myo_Frames)//(th_end_time - th_start_time) #Myoelectronical sampling rate
+    Myo_getTime = th_end_time - th_start_time #Myoelectronical's time while Myo get
 
-    outliers = "・" #外れ値群　""の中にどんどん追加していく書式
-    f.write(str(Myo_SR)) #write sampling rate
+    outliers = "鈎b魔ﾁiｊｂﾊﾙ" #外れ値群　""の中にどんどん追加していく書式
+    f.write(str(Myo_getTime)) #write time while Myo get
+    f.write("\n")
     for row in Myo_Frames:
-        f.write("\n")
-        f.write(row.translate(None, "・")) #外れ値削除しファイルに書き込み
+        if row in ",":
+            f.write("\n")
+        else:
+            f.write(row.translate(None, outliers)) #外れ値削除しファイルに書き込み""".translate(None, "・")"""
+    f.close()
 
-        #print row
     print "finished"

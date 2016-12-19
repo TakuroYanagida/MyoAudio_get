@@ -1,57 +1,78 @@
-# --- coding:utf-8 ---
+# -*- coding: utf-8 -*-
+import pyaudio
+import wave
+from time import sleep
+from winsound import Beep
 import serial
 import threading
 from time import time
+import pygame.midi
 
-ser = serial.Serial("COM3",115200)  # デバイス名とボーレートを設定しポートをオープン
-MYO_OUTPUT_FILENAME = "../Myo_test.txt" #myo file name
+#---settings---
+MYO_OUTPUT_FILENAME = "../data/20161219/5/myo/myo_file1.txt" #myo file name
+
 Myo_Frames = [] #Myoelectronical signal colums
+
+th_start_time = time() #thread start time
+
+#myoelectronical(arduino) setup
+ser = serial.Serial("COM3",115200) #デバイス名とボーレート（arduino側も同じ数値に要設定）
 
 #define thread class
 class control_th():
 
     def __init__(self):
         self.stop_event = threading.Event() #停止させるかのフラグ
+
         #スレッドの作成と開始
+        th_start_time = time() #thread start time
+        #print "time = " + str(time())
         self.thread_Myo = threading.Thread(target = self.Myo_get)
         self.thread_Myo.start()
 
     def Myo_get(self):
+        count = 0
         while not self.stop_event.is_set():
+            if count >= 10000:
+                #print "time = " + str(time())
+                print (10000/4)/(time() - th_start_time)
+                count = 0
+            else:
+                count += 1
             data = ser.read()
             Myo_Frames.append(data)
-
-    def Click_output(self):
-        while not self.stop_event.is_set():
-            Beep(700,beeptime)
-            sleep(minus_beeptime)
 
     def stop(self):
         #スレッドを停止させる
         self.stop_event.set()
         self.thread_Myo.join() #スレッドが停止するのを待つ
+        #self.thread_Midi.join() #スレッドが停止するのを待つ
+
 
 #---main program---
 if __name__ == "__main__":
+    audio = pyaudio.PyAudio()
+
     #---rec part---
     raw_input("press Enter key for rec start")
 
-    #thread start
-    i = 0
-
     th_start_time = time() #thread start time
+
+    #thread start
+    thread_do = control_th()
+
     print ("recording...")
-    while i < 10000:
-        data = ser.read()
-        Myo_Frames.append(data)
-        i += 1
+    raw_input("press enter key for rec end") #rec end by press enter
     print ("finished recording")
     print ("wait...")
 
     #thread end
+    thread_do.stop()
     th_end_time = time() #thread end time
+    print (len(Myo_Frames)/4)/(th_end_time - th_start_time)
 
-    ser.close() # ポートのクローズ
+    #---output part---
+    ser.close() #シリアルポートのクローズ
 
     #Myoelectronical output
     f = open(MYO_OUTPUT_FILENAME, "w")
@@ -60,6 +81,7 @@ if __name__ == "__main__":
 
     outliers = "鈎b魔ﾁiｊｂﾊﾙ" #外れ値群　""の中にどんどん追加していく書式
     f.write(str(Myo_getTime)) #write time while Myo get
+    f.write("\n")
     for row in Myo_Frames:
         if row in ",":
             f.write("\n")
